@@ -1,9 +1,20 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
-
 import { Platform } from 'react-native';
+
+export const AuthColors = {
+  primary: '#2D6A4F',
+  primaryLight: '#40916C',
+  primaryDark: '#1B4332',
+  background: '#F0F7F0',
+  white: '#FFFFFF',
+  text: '#1C1C1E',
+  textSecondary: '#6C6C70',
+  border: '#D1D5DB',
+  inputBg: '#FFFFFF',
+  placeholder: '#9CA3AF',
+  error: '#DC2626',
+  required: '#EF4444',
+  cardShadow: 'rgba(0, 0, 0, 0.06)',
+};
 
 const tintColorLight = '#0a7ea4';
 const tintColorDark = '#fff';

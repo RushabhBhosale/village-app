@@ -1,0 +1,145 @@
+import type { TranslationKeys } from './en';
+
+export const mr: Record<TranslationKeys, string> = {
+  // App
+  appName: 'व्हिलेज अ‍ॅप',
+
+  // Language Select
+  chooseLanguage: 'तुमची भाषा निवडा',
+  selectPreferredLanguage: 'सुरू ठेवण्यासाठी तुमची पसंतीची भाषा निवडा',
+  english: 'English',
+  marathi: 'मराठी',
+  continueBtn: 'पुढे जा',
+
+  // Login
+  loginTagline: 'आपल्या समाजाशी जोडा',
+  welcomeBack: 'पुन्हा स्वागत',
+  signInToContinue: 'सुरू ठेवण्यासाठी साइन इन करा',
+  phoneNumber: 'फोन नंबर',
+  enterPhoneNumber: 'तुमचा फोन नंबर टाका',
+  enterYourPin: 'तुमचा पिन टाका',
+  signIn: 'साइन इन करा',
+  dontHaveAccount: 'खाते नाही? ',
+  register: 'नोंदणी करा',
+  loginFailed: 'लॉगिन अयशस्वी. कृपया पुन्हा प्रयत्न करा.',
+  invalidPhoneOrPin: 'चुकीचा फोन नंबर किंवा पिन.',
+  accountNotFound: 'खाते सापडले नाही. कृपया पुन्हा नोंदणी करा.',
+
+  // Register
+  createYourAccount: 'तुमचे खाते तयार करा',
+  joinYourVillage: 'तुमच्या गावात सामील व्हा',
+  fewSteps: 'सुरू करण्यासाठी काही पाऊले',
+  fullName: 'पूर्ण नाव',
+  enterFullName: 'तुमचे पूर्ण नाव टाका',
+  yourLocation: 'तुमचे स्थान',
+  autoDetect: '📍  माझा जिल्हा शोधा',
+  loadingDistricts: 'जिल्हे लोड होत आहेत…',
+  district: 'जिल्हा',
+  selectDistrict: 'जिल्हा निवडा',
+  taluka: 'तालुका',
+  loadingTalukas: 'तालुके लोड होत आहेत…',
+  selectTaluka: 'तालुका निवडा',
+  village: 'गाव',
+  loadingVillages: 'गावे लोड होत आहेत…',
+  selectVillage: 'गाव निवडा',
+  continueBtnLabel: 'पुढे जा',
+  alreadyHaveAccount: 'आधीच खाते आहे? ',
+  search: 'शोधा…',
+  done: 'झाले',
+  noResults: 'कोणतेही परिणाम सापडले नाहीत',
+  fullNameRequired: 'पूर्ण नाव आवश्यक आहे',
+  selectVillageError: 'कृपया तुमचे गाव निवडा',
+
+  // Validation
+  phoneRequired: 'फोन नंबर आवश्यक आहे',
+  invalidPhone: '१० अंकी वैध फोन नंबर टाका',
+  mpinRequired: 'पिन आवश्यक आहे',
+  mpinLength: 'पिन नक्की ४ अंकी असावा',
+
+  // Setup MPIN
+  almostDone: 'जवळजवळ झाले!',
+  setYourPin: 'तुमचा पिन सेट करा',
+  create4DigitPin: 'तुमचे खाते सुरक्षित करण्यासाठी ४ अंकी पिन तयार करा',
+  enterPin: 'पिन टाका',
+  confirmPin: 'पिन पुष्टी करा',
+  createAccount: 'खाते तयार करा',
+  goBack: '← मागे जा',
+  pinsDoNotMatch: 'पिन जुळत नाहीत',
+  registrationFailed: 'नोंदणी अयशस्वी. कृपया पुन्हा प्रयत्न करा.',
+  phoneAlreadyRegistered: 'हा फोन नंबर आधीच नोंदणीकृत आहे. कृपया साइन इन करा.',
+
+  // Home
+  welcomeGreeting: 'पुन्हा स्वागत,',
+  yourVillage: 'तुमचे गाव',
+  yourProfile: 'तुमची प्रोफाइल',
+
+  // Settings
+  settings: 'सेटिंग्ज',
+  account: 'खाते',
+  providerSection: 'प्रदाता',
+  transportProvider: 'वाहतूक प्रदाता',
+  shopOwner: 'दुकानदार',
+  active: 'सक्रिय',
+  vehicleLabel: 'वाहन',
+  modelLabel: 'मॉडेल',
+  numberLabel: 'नंबर',
+  shopName: 'दुकानाचे नाव',
+  category: 'श्रेणी',
+  becomeProvider: 'प्रदाता बना',
+  appSection: 'अ‍ॅप',
+  version: 'आवृत्ती',
+  languageLabel: 'भाषा',
+  signOut: 'साइन आउट करा',
+  signOutConfirm: 'तुम्हाला खरोखर साइन आउट करायचे आहे का?',
+  cancel: 'रद्द करा',
+
+  // Explore
+  community: 'समुदाय',
+  comingSoon: 'लवकरच येत आहे',
+
+  // Provider: Choose Type
+  becomeProviderTitle: 'प्रदाता बना',
+  whatDoYouOffer: 'तुम्ही काय देता?',
+  chooseServiceType: 'तुमच्या गावाला द्यायच्या सेवेचा प्रकार निवडा.',
+  transport: 'वाहतूक',
+  offerRidesDeliveries: 'राइड्स किंवा\nडिलिव्हरी द्या',
+  shop: 'दुकान',
+  sellProducts: 'उत्पादने किंवा\nसेवा विका',
+
+  // Provider: Choose Vehicle
+  transportTitle: 'वाहतूक',
+  whatVehicle: 'तुमच्याकडे कोणते वाहन आहे?',
+  selectVehicleType: 'सुरू ठेवण्यासाठी वाहनाचा प्रकार निवडा.',
+  car: 'कार',
+  fourWheeler: '४ चाकी\nवाहन',
+  bike: 'बाइक',
+  twoWheeler: '२ चाकी\nवाहन',
+
+  // Provider: Vehicle Details
+  carDetails: 'कार तपशील',
+  bikeDetails: 'बाइक तपशील',
+  yourCar: 'तुमची कार',
+  yourBike: 'तुमची बाइक',
+  enterVehicleDetails: 'तुमचे वाहन तपशील टाका',
+  carNumber: 'कार नंबर',
+  bikeNumber: 'बाइक नंबर',
+  carModel: 'कार मॉडेल',
+  bikeModel: 'बाइक मॉडेल',
+  saveAndBecomeProvider: 'जतन करा आणि प्रदाता बना',
+  vehicleNumberRequired: 'वाहन नंबर आवश्यक आहे',
+  vehicleModelRequired: 'वाहन मॉडेल आवश्यक आहे',
+  couldNotSave: 'तुमचे तपशील जतन करता आले नाहीत. कृपया पुन्हा प्रयत्न करा.',
+  error: 'त्रुटी',
+
+  // Provider: Shop Details
+  shopDetails: 'दुकान तपशील',
+  yourShop: 'तुमचे दुकान',
+  tellAboutShop: 'तुमच्या दुकानाबद्दल सांगा',
+  shopNamePlaceholder: 'उदा. रमेश जनरल स्टोर',
+  categoryPlaceholder: 'उदा. किराणा, औषधालय, हार्डवेअर...',
+  shopNameRequired: 'दुकानाचे नाव आवश्यक आहे',
+  categoryRequired: 'श्रेणी आवश्यक आहे',
+
+  // Modal
+  close: 'बंद करा',
+};
