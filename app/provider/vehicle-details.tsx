@@ -15,10 +15,56 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { useAuth } from '@/context/auth-context';
 import { useLanguage } from '@/context/language-context';
+import type { VehicleType } from '@/context/auth-context';
+import type { TranslationKeys } from '@/constants/translations/en';
 import { styles } from '@/styles/provider/vehicle-details.styles';
 
+type VehicleConfig = {
+  emoji: string;
+  headerKey: TranslationKeys;
+  titleKey: TranslationKeys;
+  numberKey: TranslationKeys;
+  modelKey: TranslationKeys;
+  modelPlaceholder: string;
+};
+
+const VEHICLE_CONFIG: Record<VehicleType, VehicleConfig> = {
+  car: {
+    emoji: '🚗',
+    headerKey: 'carDetails',
+    titleKey: 'yourCar',
+    numberKey: 'carNumber',
+    modelKey: 'carModel',
+    modelPlaceholder: 'e.g. Maruti Swift',
+  },
+  bike: {
+    emoji: '🏍️',
+    headerKey: 'bikeDetails',
+    titleKey: 'yourBike',
+    numberKey: 'bikeNumber',
+    modelKey: 'bikeModel',
+    modelPlaceholder: 'e.g. Honda Activa',
+  },
+  tempo: {
+    emoji: '🚐',
+    headerKey: 'tempoDetails',
+    titleKey: 'yourTempo',
+    numberKey: 'tempoNumber',
+    modelKey: 'tempoModel',
+    modelPlaceholder: 'e.g. Mahindra Bolero',
+  },
+  other: {
+    emoji: '🚛',
+    headerKey: 'otherVehicleDetails',
+    titleKey: 'yourOtherVehicle',
+    numberKey: 'otherVehicleNumber',
+    modelKey: 'otherVehicleModel',
+    modelPlaceholder: 'e.g. Tractor, Bus...',
+  },
+};
+
 export default function VehicleDetailsScreen() {
-  const { vehicleType } = useLocalSearchParams<{ vehicleType: 'car' | 'bike' }>();
+  const { vehicleType } = useLocalSearchParams<{ vehicleType: VehicleType }>();
   const router = useRouter();
   const { updateProfile } = useAuth();
   const { t } = useLanguage();
@@ -28,8 +74,7 @@ export default function VehicleDetailsScreen() {
   const [errors, setErrors] = useState<{ number?: string; model?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
 
-  const isCar = vehicleType === 'car';
-  const emoji = isCar ? '🚗' : '🏍️';
+  const config = VEHICLE_CONFIG[vehicleType] ?? VEHICLE_CONFIG.car;
 
   const validate = () => {
     const errs: typeof errors = {};
@@ -46,6 +91,7 @@ export default function VehicleDetailsScreen() {
       await updateProfile({
         isProvider: true,
         providerType: 'transport',
+        providerStatus: 'active',
         vehicle: {
           type: vehicleType,
           number: number.trim().toUpperCase(),
@@ -70,7 +116,7 @@ export default function VehicleDetailsScreen() {
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <Text style={styles.backText}>‹</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{isCar ? t('carDetails') : t('bikeDetails')}</Text>
+          <Text style={styles.headerTitle}>{t(config.headerKey)}</Text>
         </View>
 
         <ScrollView
@@ -79,14 +125,14 @@ export default function VehicleDetailsScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.emojiHeader}>
-            <Text style={styles.emoji}>{emoji}</Text>
-            <Text style={styles.title}>{isCar ? t('yourCar') : t('yourBike')}</Text>
+            <Text style={styles.emoji}>{config.emoji}</Text>
+            <Text style={styles.title}>{t(config.titleKey)}</Text>
             <Text style={styles.subtitle}>{t('enterVehicleDetails')}</Text>
           </View>
 
           <View style={styles.card}>
             <View style={styles.fieldGroup}>
-              <Text style={styles.label}>{isCar ? t('carNumber') : t('bikeNumber')}</Text>
+              <Text style={styles.label}>{t(config.numberKey)}</Text>
               <TextInput
                 style={[styles.input, errors.number ? styles.inputError : undefined]}
                 placeholder="e.g. MH 12 AB 3456"
@@ -100,10 +146,10 @@ export default function VehicleDetailsScreen() {
             </View>
 
             <View style={styles.fieldGroup}>
-              <Text style={styles.label}>{isCar ? t('carModel') : t('bikeModel')}</Text>
+              <Text style={styles.label}>{t(config.modelKey)}</Text>
               <TextInput
                 style={[styles.input, errors.model ? styles.inputError : undefined]}
-                placeholder={isCar ? 'e.g. Maruti Swift' : 'e.g. Honda Activa'}
+                placeholder={config.modelPlaceholder}
                 placeholderTextColor={styles.placeholder.color}
                 value={model}
                 onChangeText={setModel}

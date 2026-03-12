@@ -142,4 +142,71 @@ export const mr: Record<TranslationKeys, string> = {
 
   // Modal
   close: 'बंद करा',
+
+  // Provider Dashboard
+  inactive: 'निष्क्रिय',
+  providerDashboardTitle: 'प्रदाता डॅशबोर्ड',
+  statusSection: 'स्थिती',
+  youAreActive: 'तुम्ही सेवेसाठी उपलब्ध आहात',
+  youAreInactive: 'तुम्ही सध्या अनुपलब्ध आहात',
+  tapToToggle: 'उपलब्धता बदलण्यासाठी टॅप करा',
+  photoSection: 'फोटो',
+  addPhoto: 'फोटो जोडा',
+  changePhoto: 'फोटो बदला',
+  routesSection: 'मार्ग आणि गावे',
+  addRoute: 'मार्ग जोडा',
+  addVillage: 'गाव जोडा',
+  selectRouteStart: 'सुरुवातीचे गाव निवडा',
+  selectRouteEnd: 'शेवटचे गाव निवडा',
+  add: 'जोडा',
+  noRoutes: 'कोणतेही मार्ग जोडले नाहीत',
+  noVillages: 'कोणतीही गावे जोडली नाहीत',
+  savingStatus: 'जतन होत आहे...',
+  uploadingPhoto: 'फोटो अपलोड होत आहे...',
+  photoUpdated: 'फोटो यशस्वीरित्या अपडेट झाला',
+  statusUpdated: 'स्थिती अपडेट झाली',
+
+  // Vehicle Types — extended
+  tempo: 'टेम्पो',
+  tempoSubtitle: 'मिनी ट्रक /\nविंगर',
+  otherVehicle: 'इतर',
+  otherVehicleSubtitle: 'इतर कोणतेही\nवाहन',
+  tempoDetails: 'टेम्पो तपशील',
+  otherVehicleDetails: 'वाहन तपशील',
+  yourTempo: 'तुमचा टेम्पो',
+  yourOtherVehicle: 'तुमचे वाहन',
+  tempoNumber: 'टेम्पो नंबर',
+  otherVehicleNumber: 'वाहन नंबर',
+  tempoModel: 'टेम्पो मॉडेल',
+  otherVehicleModel: 'वाहन मॉडेल',
+
+  // Transport Search (Home screen)
+  findTransport: 'वाहतूक शोधा',
+  from: 'कोठून',
+  toDestination: 'कुठे',
+  detectingLocation: 'तुमचे स्थान शोधत आहे...',
+  currentLocation: 'सध्याचे स्थान',
+  enterStartLocation: 'सुरुवातीचे ठिकाण टाका',
+  searchDestination: 'गंतव्य शोधा...',
+  searchTransport: 'शोधा',
+  locationPermissionDenied: 'स्थान परवानगी नाकारली. कृपया सेटिंग्जमध्ये सक्षम करा.',
+
+  // Transport Results
+  transportResults: 'वाहतूक परिणाम',
+  availableProviders: 'उपलब्ध प्रदाते',
+  noProvidersNearby: 'तुमच्या गावाजवळ सक्रिय वाहतूक प्रदाते सापडले नाहीत',
+  radiusInfo: '२५ किमी आत सक्रिय प्रदाते दाखवत आहे',
+  routesLabel: 'मार्ग',
+  villagesLabel: 'गावे',
+  kmAway: 'किमी दूर',
+  callProvider: 'कॉल करा',
+  loading: 'लोड होत आहे...',
+
+  // Destination / Origin Picker
+  selectDestination: 'गंतव्य निवडा',
+  selectOrigin: 'सुरुवातीचे ठिकाण निवडा',
+  searchPlaces: 'ठिकाणे शोधा...',
+  searchDistrict: 'जिल्हा शोधा...',
+  searchTaluka: 'तालुका शोधा...',
+  searchVillage: 'गाव शोधा...',
 };

@@ -140,6 +140,73 @@ export const en = {
 
   // Modal
   close: 'Close',
+
+  // Provider Dashboard
+  inactive: 'Inactive',
+  providerDashboardTitle: 'Provider Dashboard',
+  statusSection: 'Status',
+  youAreActive: 'You are available for service',
+  youAreInactive: 'You are currently unavailable',
+  tapToToggle: 'Tap card to toggle your availability',
+  photoSection: 'Photo',
+  addPhoto: 'Add Photo',
+  changePhoto: 'Change Photo',
+  routesSection: 'Routes & Villages',
+  addRoute: 'Add Route',
+  addVillage: 'Add Village',
+  selectRouteStart: 'Select Start Village',
+  selectRouteEnd: 'Select End Village',
+  add: 'Add',
+  noRoutes: 'No routes added yet',
+  noVillages: 'No villages added yet',
+  savingStatus: 'Saving...',
+  uploadingPhoto: 'Uploading photo...',
+  photoUpdated: 'Photo updated successfully',
+  statusUpdated: 'Status updated',
+
+  // Vehicle Types — extended
+  tempo: 'Tempo',
+  tempoSubtitle: 'Mini truck /\nWinger',
+  otherVehicle: 'Other',
+  otherVehicleSubtitle: 'Any other\nvehicle',
+  tempoDetails: 'Tempo Details',
+  otherVehicleDetails: 'Vehicle Details',
+  yourTempo: 'Your Tempo',
+  yourOtherVehicle: 'Your Vehicle',
+  tempoNumber: 'Tempo Number',
+  otherVehicleNumber: 'Vehicle Number',
+  tempoModel: 'Tempo Model',
+  otherVehicleModel: 'Vehicle Model',
+
+  // Transport Search (Home screen)
+  findTransport: 'Find Transport',
+  from: 'From',
+  toDestination: 'To',
+  detectingLocation: 'Detecting your location...',
+  currentLocation: 'Current Location',
+  enterStartLocation: 'Enter start location',
+  searchDestination: 'Search destination...',
+  searchTransport: 'Search',
+  locationPermissionDenied: 'Location permission denied. Please enable it in settings.',
+
+  // Transport Results
+  transportResults: 'Transport Results',
+  availableProviders: 'Available Providers',
+  noProvidersNearby: 'No active transport providers found near your village',
+  radiusInfo: 'Showing active providers within 25km',
+  routesLabel: 'Routes',
+  villagesLabel: 'Villages',
+  kmAway: 'km away',
+  callProvider: 'Call',
+  loading: 'Loading...',
+
+  // Destination / Origin Picker
+  selectDestination: 'Select Destination',
+  selectOrigin: 'Select Starting Point',
+  searchPlaces: 'Search places...',
+  searchDistrict: 'Search district...',
+  searchTaluka: 'Search taluka...',
+  searchVillage: 'Search village...',
 };
 
 export type TranslationKeys = keyof typeof en;

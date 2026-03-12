@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
@@ -13,9 +13,11 @@ export default function ChooseVehicleScreen() {
   const VEHICLES = [
     { key: 'car' as const, emoji: '🚗', title: t('car'), subtitle: t('fourWheeler') },
     { key: 'bike' as const, emoji: '🏍️', title: t('bike'), subtitle: t('twoWheeler') },
+    { key: 'tempo' as const, emoji: '🚐', title: t('tempo'), subtitle: t('tempoSubtitle') },
+    { key: 'other' as const, emoji: '🚛', title: t('otherVehicle'), subtitle: t('otherVehicleSubtitle') },
   ];
 
-  const handleSelect = (vehicleType: 'car' | 'bike') => {
+  const handleSelect = (vehicleType: 'car' | 'bike' | 'tempo' | 'other') => {
     router.push({
       pathname: '/provider/vehicle-details',
       params: { vehicleType },
@@ -31,25 +33,27 @@ export default function ChooseVehicleScreen() {
         <Text style={styles.headerTitle}>{t('transportTitle')}</Text>
       </View>
 
-      <View style={styles.content}>
-        <Text style={styles.title}>{t('whatVehicle')}</Text>
-        <Text style={styles.subtitle}>{t('selectVehicleType')}</Text>
+      <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
+        <View style={styles.content}>
+          <Text style={styles.title}>{t('whatVehicle')}</Text>
+          <Text style={styles.subtitle}>{t('selectVehicleType')}</Text>
 
-        <View style={styles.cardsRow}>
-          {VEHICLES.map((item) => (
-            <TouchableOpacity
-              key={item.key}
-              style={styles.card}
-              onPress={() => handleSelect(item.key)}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.cardEmoji}>{item.emoji}</Text>
-              <Text style={styles.cardTitle}>{item.title}</Text>
-              <Text style={styles.cardSubtitle}>{item.subtitle}</Text>
-            </TouchableOpacity>
-          ))}
+          <View style={styles.cardsRow}>
+            {VEHICLES.map((item) => (
+              <TouchableOpacity
+                key={item.key}
+                style={styles.card}
+                onPress={() => handleSelect(item.key)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.cardEmoji}>{item.emoji}</Text>
+                <Text style={styles.cardTitle}>{item.title}</Text>
+                <Text style={styles.cardSubtitle}>{item.subtitle}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }

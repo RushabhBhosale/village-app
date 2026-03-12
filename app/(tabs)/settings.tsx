@@ -55,54 +55,29 @@ export default function SettingsScreen() {
           <Text style={styles.sectionLabel}>{t('providerSection')}</Text>
 
           {user.isProvider ? (
-            <View style={styles.providerDetailCard}>
-              <View style={styles.providerDetailHeader}>
-                <Text style={styles.providerDetailTitle}>
-                  {user.providerType === 'transport' ? t('transportProvider') : t('shopOwner')}
-                </Text>
-                <View style={styles.providerBadge}>
-                  <Text style={styles.providerBadgeText}>{t('active')}</Text>
+            <View style={styles.card}>
+              <TouchableOpacity
+                style={styles.row}
+                onPress={() => router.push('/provider/dashboard' as any)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.rowIcon, { backgroundColor: user.providerStatus === 'active' ? '#D1FAE5' : '#F3F4F6' }]}>
+                  <Ionicons
+                    name={user.providerType === 'transport' ? 'car' : 'storefront'}
+                    size={20}
+                    color={user.providerStatus === 'active' ? '#059669' : '#6B7280'}
+                  />
                 </View>
-              </View>
-
-              {user.vehicle ? (
-                <>
-                  <View style={styles.providerDetailRow}>
-                    <Text style={styles.providerDetailLabel}>{t('vehicleLabel')}</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Ionicons
-                        name={user.vehicle.type === 'car' ? 'car' : 'bicycle'}
-                        size={16}
-                        color="#374151"
-                      />
-                      <Text style={styles.providerDetailValue}>
-                        {user.vehicle.type.charAt(0).toUpperCase() + user.vehicle.type.slice(1)}
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={styles.providerDetailRow}>
-                    <Text style={styles.providerDetailLabel}>{t('modelLabel')}</Text>
-                    <Text style={styles.providerDetailValue}>{user.vehicle.model}</Text>
-                  </View>
-                  <View style={styles.providerDetailRow}>
-                    <Text style={styles.providerDetailLabel}>{t('numberLabel')}</Text>
-                    <Text style={styles.providerDetailValue}>{user.vehicle.number}</Text>
-                  </View>
-                </>
-              ) : null}
-
-              {user.shop ? (
-                <>
-                  <View style={styles.providerDetailRow}>
-                    <Text style={styles.providerDetailLabel}>{t('shopName')}</Text>
-                    <Text style={styles.providerDetailValue}>{user.shop.name}</Text>
-                  </View>
-                  <View style={styles.providerDetailRow}>
-                    <Text style={styles.providerDetailLabel}>{t('category')}</Text>
-                    <Text style={styles.providerDetailValue}>{user.shop.category}</Text>
-                  </View>
-                </>
-              ) : null}
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.rowLabel}>
+                    {user.providerType === 'transport' ? t('transportProvider') : t('shopOwner')}
+                  </Text>
+                  <Text style={{ fontSize: 12, color: user.providerStatus === 'active' ? '#059669' : '#6B7280', marginTop: 1 }}>
+                    {user.providerStatus === 'active' ? t('active') : t('inactive')}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+              </TouchableOpacity>
             </View>
           ) : (
             <View style={styles.card}>

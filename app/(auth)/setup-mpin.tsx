@@ -19,15 +19,18 @@ export default function SetupMpinScreen() {
   const router = useRouter();
   const { register } = useAuth();
   const { t } = useLanguage();
-  const { fullName, phone, villageName, taluka, district, state, pincode } = useLocalSearchParams<{
-    fullName: string;
-    phone: string;
-    villageName: string;
-    taluka: string;
-    district: string;
-    state: string;
-    pincode: string;
-  }>();
+  const { fullName, phone, villageName, taluka, district, state, pincode, villageLat, villageLng } =
+    useLocalSearchParams<{
+      fullName: string;
+      phone: string;
+      villageName: string;
+      taluka: string;
+      district: string;
+      state: string;
+      pincode: string;
+      villageLat: string;
+      villageLng: string;
+    }>();
 
   const [mpin, setMpin] = useState('');
   const [confirmMpin, setConfirmMpin] = useState('');
@@ -55,6 +58,8 @@ export default function SetupMpinScreen() {
     if (!validate()) return;
     setIsLoading(true);
     try {
+      const lat = villageLat ? parseFloat(villageLat) : undefined;
+      const lng = villageLng ? parseFloat(villageLng) : undefined;
       await register(
         {
           fullName,
@@ -64,6 +69,8 @@ export default function SetupMpinScreen() {
           ...(district ? { district } : {}),
           ...(state ? { state } : {}),
           ...(pincode ? { pincode } : {}),
+          ...(!isNaN(lat as number) && lat ? { villageLat: lat } : {}),
+          ...(!isNaN(lng as number) && lng ? { villageLng: lng } : {}),
         },
         mpin,
       );

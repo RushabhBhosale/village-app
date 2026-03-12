@@ -42,6 +42,7 @@ export default function ShopDetailsScreen() {
       await updateProfile({
         isProvider: true,
         providerType: 'shop',
+        providerStatus: 'active',
         shop: {
           name: name.trim(),
           category: category.trim(),

@@ -9,21 +9,36 @@ export interface MahaItem {
 }
 
 // English district name → Mahabhumi code mapping (for GPS pre-selection)
+// Includes renamed districts and common alternate spellings
 const DISTRICT_MAP: Record<string, string> = {
   nandurbar: '01', dhule: '02', jalgaon: '03', buldhana: '04',
   akola: '05', washim: '06', amravati: '07', wardha: '08',
   nagpur: '09', bhandara: '10', gondia: '11', gondiya: '11',
   gadchiroli: '12', chandrapur: '13', yavatmal: '14', nanded: '15',
-  hingoli: '16', parbhani: '17', jalna: '18', aurangabad: '19',
-  nashik: '20', thane: '21', 'mumbai suburban': '22', mumbai: '22',
-  raigad: '24', pune: '25', ahmadnagar: '26', bid: '27', beed: '27',
-  latur: '28', osmanabad: '29', solapur: '30', satara: '31',
+  hingoli: '16', parbhani: '17', jalna: '18',
+  aurangabad: '19', 'chhatrapati sambhajinagar': '19', sambhajinagar: '19',
+  nashik: '20', nasik: '20',
+  thane: '21', 'thane district': '21',
+  'mumbai suburban': '22', mumbai: '22',
+  raigad: '24', pune: '25',
+  ahmadnagar: '26', ahmednagar: '26', 'ahilyanagar': '26',
+  bid: '27', beed: '27',
+  latur: '28',
+  osmanabad: '29', dharashiv: '29',
+  solapur: '30', satara: '31',
   ratnagiri: '32', sindhudurg: '33', kolhapur: '34', palghar: '36',
 };
 
-// Map English district name to Mahabhumi code
+// Strip common suffixes/prefixes geocoders add, then look up in DISTRICT_MAP
 export function districtCodeFromName(name: string): string | null {
-  return DISTRICT_MAP[name.toLowerCase()] ?? null;
+  const normalized = name
+    .toLowerCase()
+    .replace(/[.,]/g, ' ')
+    .replace(/\s*(district|dist\.?|zilla|जिल्हा)\s*/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!normalized) return null;
+  return DISTRICT_MAP[normalized] ?? null;
 }
 
 let sessionReady = false;
@@ -86,23 +101,106 @@ export async function getVillages(districtCode: string, talukaCode: string): Pro
 // Detect GPS location and return the best-guess district code
 export async function detectDistrictFromGPS(): Promise<{
   districtCode: string | null;
-  districtHint: string; // English name for display
+  districtHint: string;
+  lat: number;
+  lng: number;
 } | null> {
   try {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') return null;
 
     const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${loc.coords.latitude}&lon=${loc.coords.longitude}&zoom=10&addressdetails=1`,
-      { headers: { 'Accept-Language': 'en', 'User-Agent': 'VillageApp/1.0' } },
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    const addr = data.address ?? {};
-    const districtHint = addr.state_district ?? addr.county ?? '';
+    const [addr] = await Location.reverseGeocodeAsync({
+      latitude: loc.coords.latitude,
+      longitude: loc.coords.longitude,
+    });
+    const districtHint = addr?.district ?? addr?.subregion ?? '';
     const districtCode = districtCodeFromName(districtHint);
-    return { districtCode, districtHint };
+    return { districtCode, districtHint, lat: loc.coords.latitude, lng: loc.coords.longitude };
+  } catch {
+    return null;
+  }
+}
+
+// Detect GPS location and return district code + Marathi taluka/village hints.
+// - expo-location for district (English → DISTRICT_MAP)
+// - Nominatim (Marathi) for taluka/village names to match Mahabhumi data
+// - Nominatim (English) as district fallback if expo-location fails
+export async function detectFullLocationFromGPS(): Promise<{
+  districtCode: string | null;
+  talukaHint: string;
+  villageHint: string;
+  talukaHintFallback?: string;
+  villageHintFallback?: string;
+  lat: number;
+  lng: number;
+} | null> {
+  try {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') return null;
+
+    const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+    const lat = loc.coords.latitude;
+    const lng = loc.coords.longitude;
+
+    // Run expo-location geocode + both Nominatim calls in parallel
+    const [expoAddr, nominatimMr, nominatimEn] = await Promise.allSettled([
+      Location.reverseGeocodeAsync({ latitude: lat, longitude: lng }),
+      fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=mr&addressdetails=1`,
+        { headers: { 'User-Agent': 'VillageApp/1.0' } }
+      ).then((r) => r.json()),
+      fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=en&addressdetails=1`,
+        { headers: { 'User-Agent': 'VillageApp/1.0' } }
+      ).then((r) => r.json()),
+    ]);
+
+    // Village/taluka hints: keep priority identical to dashboard detection
+    // (name -> city -> district) and keep Marathi fallback for better Mahabhumi matching.
+    let villageHint = '';
+    let talukaHint = '';
+    if (expoAddr.status === 'fulfilled') {
+      const addr = expoAddr.value[0];
+      villageHint = addr?.name ?? addr?.city ?? addr?.district ?? '';
+      talukaHint = addr?.subregion ?? '';
+    }
+
+    let villageHintFallback = '';
+    let talukaHintFallback = '';
+    if (nominatimMr.status === 'fulfilled') {
+      const a = nominatimMr.value?.address ?? {};
+      villageHintFallback = a.village ?? a.town ?? a.hamlet ?? a.suburb ?? a.neighbourhood ?? '';
+      talukaHintFallback = (a.county ?? a.municipality ?? '')
+        .replace(/\s*तालुका\s*$/, '')
+        .trim();
+    }
+
+    if (!villageHint) villageHint = villageHintFallback;
+    if (!talukaHint) talukaHint = talukaHintFallback;
+
+    // District code: try expo-location district fields first, then Nominatim English fields.
+    let districtCode: string | null = null;
+    if (expoAddr.status === 'fulfilled') {
+      const addr = expoAddr.value[0];
+      for (const field of [addr?.district, addr?.subregion]) {
+        const code = districtCodeFromName(field ?? '');
+        if (code) { districtCode = code; break; }
+      }
+    }
+    if (!districtCode && nominatimEn.status === 'fulfilled') {
+      const a = nominatimEn.value?.address ?? {};
+      for (const field of [a.county, a.district, a.municipality, a.city_district, a.state_district]) {
+        const candidate = String(field ?? '').trim();
+        if (!candidate) continue;
+        // "Pune Division" etc are not districts; skip these to avoid wrong mapping.
+        if (/\bdivision\b/i.test(candidate)) continue;
+        const code = districtCodeFromName(field ?? '');
+        if (code) { districtCode = code; break; }
+      }
+    }
+
+    return { districtCode, talukaHint, villageHint, talukaHintFallback, villageHintFallback, lat, lng };
   } catch {
     return null;
   }

@@ -78,24 +78,6 @@ export const styles = StyleSheet.create({
     color: AuthColors.error,
     marginTop: 4,
   },
-  // GPS detect button
-  detectButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 44,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: AuthColors.primary,
-    backgroundColor: '#EDF7F0',
-    gap: 6,
-    marginBottom: 12,
-  },
-  detectButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: AuthColors.primary,
-  },
   // Picker row (District / Taluka / Village)
   pickerRow: {
     height: 52,
@@ -128,85 +110,71 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     color: AuthColors.textSecondary,
   },
-  // Modal
-  modalOverlay: {
+  // Modal (drill-down pageSheet)
+  modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'flex-end',
-  },
-  modalSheet: {
-    backgroundColor: AuthColors.white,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '75%',
-    paddingBottom: 24,
+    backgroundColor: '#F9FAFB',
   },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: AuthColors.white,
     borderBottomWidth: 1,
     borderBottomColor: AuthColors.border,
+    gap: 8,
+  },
+  modalBackButton: {
+    padding: 4,
   },
   modalTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
     color: AuthColors.text,
   },
-  modalClose: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: AuthColors.primary,
+  modalBreadcrumb: {
+    fontSize: 12,
+    color: AuthColors.textSecondary,
+    marginTop: 1,
   },
-  searchBox: {
-    height: 44,
-    backgroundColor: AuthColors.background,
-    borderRadius: 10,
-    marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 8,
+  modalSearch: {
+    margin: 16,
+    backgroundColor: AuthColors.white,
+    borderRadius: 12,
     paddingHorizontal: 14,
+    paddingVertical: 12,
     fontSize: 15,
     color: AuthColors.text,
     borderWidth: 1,
     borderColor: AuthColors.border,
   },
-  listItem: {
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: AuthColors.border,
-  },
-  listItemSelected: {
-    backgroundColor: '#EDF7F0',
-  },
-  listItemText: {
-    fontSize: 16,
-    color: AuthColors.text,
-  },
-  listItemTextSelected: {
-    color: AuthColors.primary,
-    fontWeight: '600',
-  },
-  listEmpty: {
-    padding: 24,
+  modalLoading: {
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  listEmptyText: {
-    fontSize: 14,
-    color: AuthColors.textSecondary,
-  },
-  // Loading
-  loadingRow: {
+  modalItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingTop: 4,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: AuthColors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
-  loadingText: {
-    fontSize: 12,
+  modalItemText: {
+    fontSize: 15,
+    color: AuthColors.text,
+    flex: 1,
+  },
+  modalEmpty: {
+    alignItems: 'center',
+    paddingTop: 48,
+  },
+  modalEmptyText: {
+    fontSize: 15,
     color: AuthColors.textSecondary,
   },
   button: {

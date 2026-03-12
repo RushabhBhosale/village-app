@@ -12,15 +12,21 @@ import { auth, db } from '@/lib/firebase';
 
 const USER_STORAGE_KEY = 'village_app_user';
 
+export type VehicleType = 'car' | 'bike' | 'tempo' | 'other';
+
 export interface VehicleDetails {
-  type: 'car' | 'bike';
+  type: VehicleType;
   number: string;
   model: string;
+  imageUrl?: string;
+  routes?: string[];
+  villages?: string[];
 }
 
 export interface ShopDetails {
   name: string;
   category: string;
+  imageUrl?: string;
 }
 
 export interface UserProfile {
@@ -32,8 +38,11 @@ export interface UserProfile {
   district?: string;
   state?: string;
   pincode?: string;
+  villageLat?: number;
+  villageLng?: number;
   isProvider?: boolean;
   providerType?: 'transport' | 'shop';
+  providerStatus?: 'active' | 'inactive';
   vehicle?: VehicleDetails;
   shop?: ShopDetails;
 }
