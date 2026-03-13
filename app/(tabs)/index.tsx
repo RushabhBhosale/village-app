@@ -2,11 +2,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import * as Location from 'expo-location';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { useAuth } from '@/context/auth-context';
 import { useLanguage } from '@/context/language-context';
+import { detectVillageFromGPS } from '@/utils/location';
 import { styles } from '@/styles/home.styles';
 import { transportSearchStyles as ts } from '@/styles/transport.styles';
 
@@ -50,21 +50,14 @@ export default function HomeScreen() {
   const detectLocation = async () => {
     setDetectingLoc(true);
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
+      const detected = await detectVillageFromGPS();
+      if (!detected) {
         setFromLabel(user?.villageName ?? '');
         return;
       }
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      setFromLat(loc.coords.latitude);
-      setFromLng(loc.coords.longitude);
-
-      const [addr] = await Location.reverseGeocodeAsync({
-        latitude: loc.coords.latitude,
-        longitude: loc.coords.longitude,
-      });
-      const label = addr?.name ?? addr?.city ?? addr?.district ?? '';
-      setFromLabel(label || t('currentLocation'));
+      setFromLat(detected.latitude);
+      setFromLng(detected.longitude);
+      setFromLabel(detected.villageName || user?.villageName || t('currentLocation'));
     } catch {
       setFromLabel(user?.villageName ?? t('currentLocation'));
     } finally {

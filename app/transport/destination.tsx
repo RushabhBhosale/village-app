@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -6,20 +6,23 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { useAuth } from '@/context/auth-context';
 import { useLanguage } from '@/context/language-context';
-import { districtCodeFromName, getDistricts, getTalukas, getVillages, type MahaItem } from '@/utils/mahabhumi';
+import { searchVillages, getVillagesByDistrict, type FlatVillage } from '@/utils/village-db';
 import { destinationPickerStyles as s } from '@/styles/transport.styles';
 
-type VillageOption = MahaItem & {
+type VillageOption = {
   key: string;
-  districtCode: string;
+  name: string;
   districtName: string;
-  talukaCode: string;
   talukaName: string;
-  priority: number;
 };
 
-function normalizeText(value: string): string {
-  return value.toLowerCase().trim();
+function toOption(r: FlatVillage): VillageOption {
+  return {
+    key: `${r.district_name}:${r.taluka_name}:${r.village_name}`,
+    name: r.village_name,
+    districtName: r.district_name,
+    talukaName: r.taluka_name,
+  };
 }
 
 export default function LocationPickerScreen() {
@@ -29,100 +32,56 @@ export default function LocationPickerScreen() {
   const { mode } = useLocalSearchParams<{ mode?: string }>();
   const isOrigin = mode === 'origin';
 
-  const [villages, setVillages] = useState<VillageOption[]>([]);
-  const [drillLoading, setDrillLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [drillQuery, setDrillQuery] = useState('');
+  const [items, setItems] = useState<VillageOption[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Load all villages and prioritize current user's district at top.
+  // On open: show user's district villages immediately
   useEffect(() => {
     let isActive = true;
     (async () => {
-      setDrillLoading(true);
-      setLoadingMore(false);
-      setVillages([]);
+      setLoading(true);
       try {
-        const districts = await getDistricts();
-        if (!isActive) return;
-
-        const userDistrictName = (user?.district ?? '').trim();
-        const userDistrictCode = userDistrictName ? districtCodeFromName(userDistrictName) : null;
-        const preferredDistrict =
-          districts.find((d) => d.code === userDistrictCode) ??
-          districts.find((d) => normalizeText(d.value) === normalizeText(userDistrictName)) ??
-          null;
-
-        const orderedDistricts = preferredDistrict
-          ? [preferredDistrict, ...districts.filter((d) => d.code !== preferredDistrict.code)]
-          : districts;
-
-        const next: VillageOption[] = [];
-        let hasShownData = false;
-        setLoadingMore(true);
-
-        for (const district of orderedDistricts) {
-          const talukas = await getTalukas(district.code).catch(() => [] as MahaItem[]);
-
-          const villagesByTaluka = await Promise.all(
-            talukas.map(async (taluka) => ({
-              taluka,
-              villages: await getVillages(district.code, taluka.code).catch(() => [] as MahaItem[]),
-            })),
-          );
-
-          for (const talukaGroup of villagesByTaluka) {
-            for (const village of talukaGroup.villages) {
-              next.push({
-                ...village,
-                key: `${district.code}:${talukaGroup.taluka.code}:${village.code}:${village.value}`,
-                districtCode: district.code,
-                districtName: district.value,
-                talukaCode: talukaGroup.taluka.code,
-                talukaName: talukaGroup.taluka.value,
-                priority: preferredDistrict && district.code === preferredDistrict.code ? 0 : 1,
-              });
-            }
-          }
-
-          if (!isActive) return;
-          setVillages([...next]);
-          if (!hasShownData) {
-            hasShownData = true;
-            setDrillLoading(false);
-          }
-        }
-
-        if (!isActive) return;
-        setVillages(
-          [...next].sort((a, b) => {
-            if (a.priority !== b.priority) return a.priority - b.priority;
-            return a.value.localeCompare(b.value, 'mr');
-          }),
-        );
+        const district = (user?.district ?? '').trim();
+        const rows = district
+          ? await getVillagesByDistrict(district)
+          : await searchVillages('', 80);
+        if (isActive) setItems(rows.map(toOption));
+      } catch {
+        if (isActive) setItems([]);
       } finally {
-        if (!isActive) return;
-        setDrillLoading(false);
-        setLoadingMore(false);
+        if (isActive) setLoading(false);
       }
     })();
-
-    return () => {
-      isActive = false;
-    };
+    return () => { isActive = false; };
   }, [user?.district]);
 
-  const filteredItems = useMemo(() => {
-    if (!drillQuery.trim()) return villages;
-    const q = drillQuery.toLowerCase();
-    return villages.filter((i) => i.value.toLowerCase().includes(q));
-  }, [drillQuery, villages]);
+  // Search as you type with 200ms debounce
+  const handleQuery = (text: string) => {
+    setQuery(text);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const rows = text.trim()
+          ? await searchVillages(text.trim())
+          : await getVillagesByDistrict((user?.district ?? '').trim());
+        setItems(rows.map(toOption));
+      } catch {
+        setItems([]);
+      } finally {
+        setLoading(false);
+      }
+    }, 200);
+  };
 
   const handleVillageSelect = (village: VillageOption) => {
     router.navigate({
       pathname: '/(tabs)',
       params: isOrigin
-        ? { selectedOrigin: village.value }
-        : { selectedDestination: village.value },
+        ? { selectedOrigin: village.name }
+        : { selectedDestination: village.name },
     } as any);
   };
 
@@ -143,37 +102,40 @@ export default function LocationPickerScreen() {
         style={s.searchBox}
         placeholder={t('searchVillage')}
         placeholderTextColor="#9CA3AF"
-        value={drillQuery}
-        onChangeText={setDrillQuery}
+        value={query}
+        onChangeText={handleQuery}
         autoCorrect={false}
+        autoFocus
       />
 
-      {drillLoading && villages.length === 0 ? (
+      {!query.trim() && (
+        <Text style={s.searchHint}>
+          {user?.district
+            ? `Showing villages in ${user.district} — type to search all`
+            : 'Type to search villages'}
+        </Text>
+      )}
+
+      {loading ? (
         <View style={s.loading}><ActivityIndicator color="#2D6A4F" /></View>
       ) : (
         <FlatList
-          data={filteredItems}
+          data={items}
           keyExtractor={(item) => item.key}
           keyboardShouldPersistTaps="handled"
-          initialNumToRender={40}
+          initialNumToRender={30}
           renderItem={({ item }) => (
             <TouchableOpacity
               style={s.item}
               activeOpacity={0.7}
               onPress={() => handleVillageSelect(item)}
             >
-              <Text style={s.itemText}>{item.value}</Text>
+              <Text style={s.itemText}>{item.name}</Text>
+              <Text style={s.itemSub}>{item.talukaName}, {item.districtName}</Text>
             </TouchableOpacity>
           )}
           ListEmptyComponent={
             <View style={s.empty}><Text style={s.emptyText}>{t('noResults')}</Text></View>
-          }
-          ListFooterComponent={
-            loadingMore ? (
-              <View style={{ alignItems: 'center', paddingVertical: 16 }}>
-                <ActivityIndicator color="#2D6A4F" />
-              </View>
-            ) : null
           }
         />
       )}

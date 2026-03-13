@@ -1,7 +1,7 @@
 import React from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { useLanguage } from '@/context/language-context';
 import { styles } from '@/styles/provider/selection.styles';
@@ -9,6 +9,7 @@ import { styles } from '@/styles/provider/selection.styles';
 export default function ChooseVehicleScreen() {
   const router = useRouter();
   const { t } = useLanguage();
+  const { addMode } = useLocalSearchParams<{ addMode?: string }>();
 
   const VEHICLES = [
     { key: 'car' as const, emoji: '🚗', title: t('car'), subtitle: t('fourWheeler') },
@@ -20,7 +21,7 @@ export default function ChooseVehicleScreen() {
   const handleSelect = (vehicleType: 'car' | 'bike' | 'tempo' | 'other') => {
     router.push({
       pathname: '/provider/vehicle-details',
-      params: { vehicleType },
+      params: { vehicleType, addMode: addMode ?? '0' },
     });
   };
 

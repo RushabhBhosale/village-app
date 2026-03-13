@@ -48,10 +48,12 @@ export function MpinInput({ value, onChange, autoFocus = false, ref }: Props) {
         ref={inputRef}
         value={value}
         onChangeText={(text) => onChange(text.replace(/\D/g, '').slice(0, MPIN_LENGTH))}
-        keyboardType="number-pad"
-        secureTextEntry
+        keyboardType="numeric"
+        maxLength={MPIN_LENGTH}
         autoFocus={autoFocus}
         caretHidden
+        autoCorrect={false}
+        autoCapitalize="none"
         style={styles.hiddenInput}
       />
     </Pressable>

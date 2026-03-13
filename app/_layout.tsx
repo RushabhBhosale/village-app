@@ -7,6 +7,7 @@ import 'react-native-reanimated';
 import { AuthProvider, useAuth } from '@/context/auth-context';
 import { LanguageProvider, useLanguage } from '@/context/language-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { isSeeded, seedVillages } from '@/utils/village-db';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -49,6 +50,21 @@ function RootNavigator() {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const seeded = await isSeeded();
+        if (seeded) {
+          console.log('[village-db] Already seeded, skipping fetch.');
+          return;
+        }
+        await seedVillages();
+      } catch (e) {
+        console.error('[village-db] Seeding failed:', e);
+      }
+    })();
+  }, []);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>

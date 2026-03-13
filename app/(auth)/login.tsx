@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -14,7 +14,7 @@ import { Link } from 'expo-router';
 import { useAuth } from '@/context/auth-context';
 import { useLanguage } from '@/context/language-context';
 import { validatePhone, validateMpin } from '@/utils/validation';
-import { MpinInput } from '@/components/mpin-input';
+import { MpinInput, MpinInputHandle } from '@/components/mpin-input';
 import { styles } from '@/styles/auth/login.styles';
 
 export default function LoginScreen() {
@@ -24,6 +24,7 @@ export default function LoginScreen() {
   const [mpin, setMpin] = useState('');
   const [errors, setErrors] = useState<{ phone?: string; mpin?: string; general?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
+  const mpinRef = useRef<MpinInputHandle>(null);
 
   const validate = () => {
     const errs: typeof errors = {};
@@ -51,6 +52,10 @@ export default function LoginScreen() {
         error.code === 'auth/user-not-found'
       ) {
         general = t('invalidPhoneOrPin');
+        setMpin('');
+        setTimeout(() => {
+          mpinRef.current?.focus();
+        }, 0);
       } else if (error.message === 'profile/not-found') {
         general = t('accountNotFound');
       }
@@ -101,7 +106,11 @@ export default function LoginScreen() {
 
           <View style={styles.fieldGroup}>
             <Text style={styles.mpinLabel}>{t('enterYourPin')}</Text>
-            <MpinInput value={mpin} onChange={(v) => { setMpin(v); setErrors({}); }} />
+            <MpinInput
+              ref={mpinRef}
+              value={mpin}
+              onChange={(v) => { setMpin(v); setErrors({}); }}
+            />
             {errors.mpin ? <Text style={styles.mpinError}>{errors.mpin}</Text> : null}
           </View>
 

@@ -57,10 +57,11 @@ export const styles = StyleSheet.create({
   },
   cardsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 14,
   },
   card: {
-    flex: 1,
+    width: '47%',
     backgroundColor: AuthColors.white,
     borderRadius: 20,
     padding: 20,

@@ -15,69 +15,13 @@ import { Link, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import {
-  MahaItem,
-  detectFullLocationFromGPS,
-  getDistricts,
-  getTalukas,
-  getVillages,
-} from '@/utils/mahabhumi';
+import { getDistricts, getTalukas, getVillages } from '@/utils/village-db';
+import { detectVillageFromGPS } from '@/utils/location';
 import { AuthColors } from '@/constants/theme';
 import { useLanguage } from '@/context/language-context';
 import { styles } from '@/styles/auth/register.styles';
 
 type DrillLevel = 'district' | 'taluka' | 'village';
-
-function normalizePlaceName(value: string): string {
-  return value
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/(district|dist\.?|taluka|taluk|tehsil|tahsil|county|जिल्हा|तालुका|तहसील)/g, ' ')
-    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function findBestMatch(items: MahaItem[], hint: string): MahaItem | null {
-  const normalizedHint = normalizePlaceName(hint);
-  if (!normalizedHint) return null;
-
-  const compactHint = normalizedHint.replace(/\s+/g, '');
-  const exact = items.find((item) => normalizePlaceName(item.value).replace(/\s+/g, '') === compactHint);
-  if (exact) return exact;
-
-  const contains = items.find((item) => {
-    const normalizedItem = normalizePlaceName(item.value).replace(/\s+/g, '');
-    return normalizedItem.includes(compactHint) || compactHint.includes(normalizedItem);
-  });
-  if (contains) return contains;
-
-  const hintWords = normalizedHint.split(' ').filter(Boolean);
-  if (hintWords.length > 1) {
-    const allWords = items.find((item) => {
-      const normalizedItem = normalizePlaceName(item.value);
-      return hintWords.every((word) => normalizedItem.includes(word));
-    });
-    if (allWords) return allWords;
-  }
-
-  return null;
-}
-
-function getUniqueHints(...hints: Array<string | undefined>): string[] {
-  const seen = new Set<string>();
-  const values: string[] = [];
-  for (const hint of hints) {
-    const value = (hint ?? '').trim();
-    if (!value) continue;
-    const key = value.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    values.push(value);
-  }
-  return values;
-}
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -93,87 +37,37 @@ export default function RegisterScreen() {
   }>({});
 
   // Location selection
-  const [selectedDistrict, setSelectedDistrict] = useState<MahaItem | null>(null);
-  const [selectedTaluka, setSelectedTaluka] = useState<MahaItem | null>(null);
-  const [selectedVillage, setSelectedVillage] = useState<MahaItem | null>(null);
+  const [selectedDistrict, setSelectedDistrict] = useState<string | null>(null);
+  const [selectedTaluka, setSelectedTaluka] = useState<string | null>(null);
+  const [selectedVillage, setSelectedVillage] = useState<string | null>(null);
   const [detectingLocation, setDetectingLocation] = useState(false);
-
   const hasDetected = useRef(false);
 
-  // Auto-detect location on mount (same pattern as home screen transport "from" field)
+  const detectCurrentVillage = async () => {
+    setDetectingLocation(true);
+    try {
+      const detected = await detectVillageFromGPS();
+      const detectedVillage = detected?.villageName ?? '';
+      if (!detectedVillage) return;
+      setSelectedVillage(detectedVillage);
+      setErrors((e) => ({ ...e, village: undefined }));
+    } catch {
+      // Keep manual picker as fallback.
+    } finally {
+      setDetectingLocation(false);
+    }
+  };
+
   useEffect(() => {
     if (hasDetected.current) return;
     hasDetected.current = true;
-    let isActive = true;
-    (async () => {
-      setDetectingLocation(true);
-      try {
-        const result = await detectFullLocationFromGPS();
-        if (!result || !isActive) return;
-
-        const allDistricts = await getDistricts();
-        if (!isActive) return;
-        const districtMatch = allDistricts.find((d) => d.code === result.districtCode);
-        if (!districtMatch) return;
-        setSelectedDistrict(districtMatch);
-
-        const talukaHints = getUniqueHints(result.talukaHint, result.talukaHintFallback);
-        const villageHints = getUniqueHints(result.villageHint, result.villageHintFallback);
-
-        const allTalukas = await getTalukas(districtMatch.code);
-        if (!isActive) return;
-        let talukaMatch: MahaItem | null = null;
-        for (const hint of talukaHints) {
-          talukaMatch = findBestMatch(allTalukas, hint);
-          if (talukaMatch) break;
-        }
-
-        let villageMatch: MahaItem | null = null;
-        if (talukaMatch && villageHints.length) {
-          const allVillages = await getVillages(districtMatch.code, talukaMatch.code);
-          if (!isActive) return;
-          for (const hint of villageHints) {
-            villageMatch = findBestMatch(allVillages, hint);
-            if (villageMatch) break;
-          }
-        }
-
-        // If taluka hint is noisy, search village across talukas in detected district.
-        if (!villageMatch && villageHints.length) {
-          for (const taluka of allTalukas) {
-            const villages = await getVillages(districtMatch.code, taluka.code);
-            if (!isActive) return;
-            for (const hint of villageHints) {
-              villageMatch = findBestMatch(villages, hint);
-              if (villageMatch) {
-                talukaMatch = taluka;
-                break;
-              }
-            }
-            if (villageMatch) break;
-          }
-        }
-
-        if (talukaMatch) setSelectedTaluka(talukaMatch);
-        if (villageMatch) {
-          setSelectedVillage(villageMatch);
-          setErrors((e) => ({ ...e, village: undefined }));
-        }
-      } catch {
-        // Best effort only; manual picker remains available.
-      } finally {
-        if (isActive) setDetectingLocation(false);
-      }
-    })();
-    return () => {
-      isActive = false;
-    };
+    void detectCurrentVillage();
   }, []);
 
   // Drill-down modal
   const [drillOpen, setDrillOpen] = useState(false);
   const [drillLevel, setDrillLevel] = useState<DrillLevel>('district');
-  const [drillItems, setDrillItems] = useState<MahaItem[]>([]);
+  const [drillItems, setDrillItems] = useState<string[]>([]);
   const [drillLoading, setDrillLoading] = useState(false);
   const [drillQuery, setDrillQuery] = useState('');
 
@@ -184,12 +78,12 @@ export default function RegisterScreen() {
     try {
       if (selectedDistrict && selectedTaluka) {
         setDrillLevel('village');
-        setDrillItems(await getVillages(selectedDistrict.code, selectedTaluka.code));
+        setDrillItems(await getVillages(selectedDistrict, selectedTaluka));
         return;
       }
       if (selectedDistrict) {
         setDrillLevel('taluka');
-        setDrillItems(await getTalukas(selectedDistrict.code));
+        setDrillItems(await getTalukas(selectedDistrict));
         return;
       }
       setDrillLevel('district');
@@ -201,7 +95,7 @@ export default function RegisterScreen() {
     }
   };
 
-  const handleDistrictSelect = async (district: MahaItem) => {
+  const handleDistrictSelect = async (district: string) => {
     setSelectedDistrict(district);
     setSelectedTaluka(null);
     setSelectedVillage(null);
@@ -209,22 +103,22 @@ export default function RegisterScreen() {
     setDrillQuery('');
     setDrillLoading(true);
     try {
-      setDrillItems(await getTalukas(district.code));
+      setDrillItems(await getTalukas(district));
     } catch { setDrillItems([]); } finally { setDrillLoading(false); }
   };
 
-  const handleTalukaSelect = async (taluka: MahaItem) => {
+  const handleTalukaSelect = async (taluka: string) => {
     setSelectedTaluka(taluka);
     setSelectedVillage(null);
     setDrillLevel('village');
     setDrillQuery('');
     setDrillLoading(true);
     try {
-      setDrillItems(await getVillages(selectedDistrict!.code, taluka.code));
+      setDrillItems(await getVillages(selectedDistrict!, taluka));
     } catch { setDrillItems([]); } finally { setDrillLoading(false); }
   };
 
-  const handleVillageSelect = (village: MahaItem) => {
+  const handleVillageSelect = (village: string) => {
     setSelectedVillage(village);
     setDrillOpen(false);
     setErrors((e) => ({ ...e, village: undefined }));
@@ -235,7 +129,7 @@ export default function RegisterScreen() {
     if (drillLevel === 'village') {
       setDrillLevel('taluka');
       setDrillLoading(true);
-      getTalukas(selectedDistrict!.code)
+      getTalukas(selectedDistrict!)
         .then((items) => { setDrillItems(items); setDrillLoading(false); })
         .catch(() => setDrillLoading(false));
     } else if (drillLevel === 'taluka') {
@@ -255,13 +149,13 @@ export default function RegisterScreen() {
   const filteredDrillItems = useMemo(() => {
     if (!drillQuery.trim()) return drillItems;
     const q = drillQuery.toLowerCase();
-    return drillItems.filter((i) => i.value.toLowerCase().includes(q));
+    return drillItems.filter((i) => i.toLowerCase().includes(q));
   }, [drillQuery, drillItems]);
 
   const drillBreadcrumb =
     drillLevel === 'district' ? '' :
-    drillLevel === 'taluka' ? (selectedDistrict?.value ?? '') :
-    `${selectedDistrict?.value} › ${selectedTaluka?.value}`;
+    drillLevel === 'taluka' ? (selectedDistrict ?? '') :
+    `${selectedDistrict} › ${selectedTaluka}`;
 
   const drillPlaceholder =
     drillLevel === 'district' ? t('searchDistrict') :
@@ -273,7 +167,7 @@ export default function RegisterScreen() {
     drillLevel === 'taluka' ? t('selectTaluka') :
     t('selectVillage');
 
-  const locationDisplay = selectedVillage?.value ?? null;
+  const locationDisplay = selectedVillage ?? null;
 
   const validate = () => {
     const errs: typeof errors = {};
@@ -292,9 +186,9 @@ export default function RegisterScreen() {
       params: {
         fullName: fullName.trim(),
         phone: phone.replace(/\D/g, ''),
-        villageName: selectedVillage!.value,
-        taluka: selectedTaluka?.value ?? '',
-        district: selectedDistrict?.value ?? '',
+        villageName: selectedVillage!,
+        taluka: selectedTaluka ?? '',
+        district: selectedDistrict ?? '',
         state: 'Maharashtra',
         pincode: '',
       },
@@ -353,7 +247,6 @@ export default function RegisterScreen() {
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>{t('yourLocation')}</Text>
 
-            {/* Single location picker row */}
             <TouchableOpacity
               style={[styles.pickerRow, errors.village ? styles.pickerRowError : undefined]}
               onPress={openLocationPicker}
@@ -369,7 +262,19 @@ export default function RegisterScreen() {
               {detectingLocation ? (
                 <ActivityIndicator size="small" color={AuthColors.textSecondary} />
               ) : (
-                <Ionicons name="chevron-forward" size={16} color={AuthColors.textSecondary} />
+                <View style={styles.pickerActions}>
+                  <TouchableOpacity
+                    style={styles.refreshAction}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      void detectCurrentVillage();
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="refresh" size={16} color={AuthColors.textSecondary} />
+                  </TouchableOpacity>
+                  <Ionicons name="chevron-forward" size={16} color={AuthColors.textSecondary} />
+                </View>
               )}
             </TouchableOpacity>
 
@@ -430,7 +335,7 @@ export default function RegisterScreen() {
           ) : (
             <FlatList
               data={filteredDrillItems}
-              keyExtractor={(item) => item.code}
+              keyExtractor={(item, index) => `${item}_${index}`}
               keyboardShouldPersistTaps="handled"
               renderItem={({ item }) => (
                 <TouchableOpacity
@@ -442,7 +347,7 @@ export default function RegisterScreen() {
                     else handleVillageSelect(item);
                   }}
                 >
-                  <Text style={styles.modalItemText}>{item.value}</Text>
+                  <Text style={styles.modalItemText}>{item}</Text>
                   {drillLevel !== 'village' && (
                     <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
                   )}

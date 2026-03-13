@@ -44,6 +44,7 @@ export interface UserProfile {
   providerType?: 'transport' | 'shop';
   providerStatus?: 'active' | 'inactive';
   vehicle?: VehicleDetails;
+  additionalVehicles?: VehicleDetails[];
   shop?: ShopDetails;
 }
 

@@ -19,6 +19,7 @@ import { useLanguage } from '@/context/language-context';
 import { haversineKm, geocodeLocation } from '@/utils/geo';
 import type { UserProfile } from '@/context/auth-context';
 import { transportResultStyles as s } from '@/styles/transport.styles';
+import BottomNavBar from '@/components/BottomNavBar';
 
 const RADIUS_KM = 25;
 
@@ -198,6 +199,7 @@ export default function TransportResultsScreen() {
           />
         </>
       )}
+      <BottomNavBar />
     </SafeAreaView>
   );
 }

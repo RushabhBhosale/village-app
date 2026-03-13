@@ -106,6 +106,13 @@ export const styles = StyleSheet.create({
     color: AuthColors.placeholder,
     flex: 1,
   },
+  pickerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  refreshAction: {
+    paddingRight: 8,
+  },
   pickerChevron: {
     fontSize: 12,
     color: AuthColors.textSecondary,

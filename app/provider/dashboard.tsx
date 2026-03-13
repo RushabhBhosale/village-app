@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -19,11 +19,12 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '@/context/auth-context';
 import { useLanguage } from '@/context/language-context';
 import { uploadImage } from '@/utils/storage';
-import { getDistricts, getTalukas, getVillages, type MahaItem } from '@/utils/mahabhumi';
+import { searchVillages, getVillagesByDistrict } from '@/utils/village-db';
 import { styles } from '@/styles/provider/dashboard.styles';
+import BottomNavBar from '@/components/BottomNavBar';
 
-type DrillLevel = 'district' | 'taluka' | 'village';
 type PickerFor = 'route' | 'village' | null;
+type VillageOption = { key: string; name: string };
 
 export default function ProviderDashboardScreen() {
   const router = useRouter();
@@ -31,22 +32,19 @@ export default function ProviderDashboardScreen() {
   const { t } = useLanguage();
 
   const [togglingStatus, setTogglingStatus] = useState(false);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState<'vehicle' | 'shop' | null>(null);
 
-  // Mahabhumi picker modal
+  // Village picker modal
   const [pickerFor, setPickerFor] = useState<PickerFor>(null);
-  const [routeStart, setRouteStart] = useState<string | null>(null); // first village of a route
-  const [drillLevel, setDrillLevel] = useState<DrillLevel>('district');
-  const [drillItems, setDrillItems] = useState<MahaItem[]>([]);
+  const [routeStart, setRouteStart] = useState<string | null>(null);
+  const [drillItems, setDrillItems] = useState<VillageOption[]>([]);
   const [drillLoading, setDrillLoading] = useState(false);
-  const [selectedDistrict, setSelectedDistrict] = useState<MahaItem | null>(null);
-  const [selectedTaluka, setSelectedTaluka] = useState<MahaItem | null>(null);
   const [drillQuery, setDrillQuery] = useState('');
+  const searchTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   if (!user || !user.isProvider) return null;
 
   const isActive = user.providerStatus === 'active';
-  const isTransport = user.providerType === 'transport';
 
   // ── Status toggle ────────────────────────────────────────────────────────
   const handleToggleStatus = async () => {
@@ -61,7 +59,7 @@ export default function ProviderDashboardScreen() {
   };
 
   // ── Photo picker ─────────────────────────────────────────────────────────
-  const handlePickPhoto = async () => {
+  const handlePickPhoto = async (forService: 'vehicle' | 'shop') => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert(t('error'), 'Photo library permission is required.');
@@ -75,18 +73,18 @@ export default function ProviderDashboardScreen() {
     });
     if (result.canceled || !result.assets[0]) return;
 
-    setUploadingPhoto(true);
+    setUploadingPhoto(forService);
     try {
       const url = await uploadImage(user.uid, 'provider', result.assets[0].uri);
-      if (isTransport && user.vehicle) {
+      if (forService === 'vehicle' && user.vehicle) {
         await updateProfile({ vehicle: { ...user.vehicle, imageUrl: url } });
-      } else if (!isTransport && user.shop) {
+      } else if (forService === 'shop' && user.shop) {
         await updateProfile({ shop: { ...user.shop, imageUrl: url } });
       }
     } catch {
       Alert.alert(t('error'), t('couldNotSave'));
     } finally {
-      setUploadingPhoto(false);
+      setUploadingPhoto(null);
     }
   };
 
@@ -107,56 +105,64 @@ export default function ProviderDashboardScreen() {
     });
   };
 
-  // ── Mahabhumi picker ─────────────────────────────────────────────────────
-  const resetDrillToDistricts = async () => {
-    setDrillLevel('district');
-    setSelectedDistrict(null);
-    setSelectedTaluka(null);
-    setDrillQuery('');
+  const handleRemoveAdditionalVehicle = async (idx: number) => {
+    const vehicles = (user.additionalVehicles ?? []).filter((_, i) => i !== idx);
+    await updateProfile({ additionalVehicles: vehicles }).catch(() => {
+      Alert.alert(t('error'), t('couldNotSave'));
+    });
+  };
+
+  // ── Village picker ───────────────────────────────────────────────────────
+
+  const handleDrillQuery = (text: string) => {
+    setDrillQuery(text);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(async () => {
+      setDrillLoading(true);
+      try {
+        const district = (user.district ?? '').trim();
+        const rows = text.trim()
+          ? await searchVillages(text.trim())
+          : district ? await getVillagesByDistrict(district) : await searchVillages('', 80);
+        setDrillItems(rows.map((r) => ({
+          key: `${r.district_name}:${r.taluka_name}:${r.village_name}`,
+          name: r.village_name,
+        })));
+      } catch { /* keep current list */ } finally { setDrillLoading(false); }
+    }, 200);
+  };
+
+  const loadInitialVillages = async () => {
     setDrillLoading(true);
     try {
-      setDrillItems(await getDistricts());
+      const district = (user.district ?? '').trim();
+      const rows = district
+        ? await getVillagesByDistrict(district)
+        : await searchVillages('', 80);
+      setDrillItems(rows.map((r) => ({
+        key: `${r.district_name}:${r.taluka_name}:${r.village_name}`,
+        name: r.village_name,
+      })));
     } catch { setDrillItems([]); } finally { setDrillLoading(false); }
   };
 
-  const openPicker = (forField: PickerFor) => {
+  const openPicker = async (forField: PickerFor) => {
     setPickerFor(forField);
     setRouteStart(null);
-    resetDrillToDistricts();
-  };
-
-  const handleDistrictSelect = async (district: MahaItem) => {
-    setSelectedDistrict(district);
-    setDrillLevel('taluka');
     setDrillQuery('');
-    setDrillLoading(true);
-    try {
-      setDrillItems(await getTalukas(district.code));
-    } catch { setDrillItems([]); } finally { setDrillLoading(false); }
+    await loadInitialVillages();
   };
 
-  const handleTalukaSelect = async (taluka: MahaItem) => {
-    setSelectedTaluka(taluka);
-    setDrillLevel('village');
-    setDrillQuery('');
-    setDrillLoading(true);
-    try {
-      setDrillItems(await getVillages(selectedDistrict!.code, taluka.code));
-    } catch { setDrillItems([]); } finally { setDrillLoading(false); }
-  };
-
-  const handleVillageSelect = async (village: MahaItem) => {
+  const handleVillageSelect = async (village: VillageOption) => {
     if (!user.vehicle || !pickerFor) return;
 
     if (pickerFor === 'route') {
       if (!routeStart) {
-        // First pick — save start, reset drill for end pick
-        setRouteStart(village.value);
-        resetDrillToDistricts();
+        setRouteStart(village.name);
+        setDrillQuery('');
         return;
       }
-      // Second pick — build route string and save
-      const routeEntry = `${routeStart} → ${village.value}`;
+      const routeEntry = `${routeStart} → ${village.name}`;
       setPickerFor(null);
       setRouteStart(null);
       try {
@@ -169,10 +175,9 @@ export default function ProviderDashboardScreen() {
       return;
     }
 
-    // Village pick
     setPickerFor(null);
     try {
-      const villages = [...(user.vehicle.villages ?? []), village.value];
+      const villages = [...(user.vehicle.villages ?? []), village.name];
       await updateProfile({ vehicle: { ...user.vehicle, villages } });
     } catch (err: any) {
       console.error('[dashboard/save]', err?.code, err?.message);
@@ -182,48 +187,43 @@ export default function ProviderDashboardScreen() {
 
   const handleDrillBack = () => {
     setDrillQuery('');
-    if (drillLevel === 'village') {
-      setDrillLevel('taluka');
-      setDrillLoading(true);
-      getTalukas(selectedDistrict!.code)
-        .then((items) => { setDrillItems(items); setDrillLoading(false); })
-        .catch(() => setDrillLoading(false));
-    } else if (drillLevel === 'taluka') {
-      setDrillLevel('district');
-      setSelectedDistrict(null);
-      setDrillLoading(true);
-      getDistricts()
-        .then((items) => { setDrillItems(items); setDrillLoading(false); })
-        .catch(() => setDrillLoading(false));
-    } else if (routeStart) {
-      // At district level while picking end village — go back to start-village pick
+    if (routeStart) {
       setRouteStart(null);
-      resetDrillToDistricts();
-    } else {
-      setPickerFor(null);
+      return;
     }
+    setPickerFor(null);
   };
 
-  const filteredDrillItems = useMemo(() => {
-    if (!drillQuery.trim()) return drillItems;
-    const q = drillQuery.toLowerCase();
-    return drillItems.filter((i) => i.value.toLowerCase().includes(q));
-  }, [drillQuery, drillItems]);
-
-  const drillBreadcrumb =
-    drillLevel === 'district' ? '' :
-    drillLevel === 'taluka' ? (selectedDistrict?.value ?? '') :
-    `${selectedDistrict?.value} › ${selectedTaluka?.value}`;
-
-  const pickerPlaceholder =
-    drillLevel === 'district' ? t('searchDistrict') :
-    drillLevel === 'taluka' ? t('searchTaluka') :
-    t('searchVillage');
 
   // ── UI ───────────────────────────────────────────────────────────────────
-  const imageUrl = isTransport ? user.vehicle?.imageUrl : user.shop?.imageUrl;
   const vehicleEmojis: Record<string, string> = { car: '🚗', bike: '🏍️', tempo: '🚐', other: '🚛' };
-  const vehicleEmoji = isTransport && user.vehicle ? vehicleEmojis[user.vehicle.type] ?? '🚗' : '🏪';
+  const hasTransport = !!user.vehicle;
+  const hasShop = !!user.shop;
+
+  const PhotoRow = ({ forService, imageUrl, fallbackEmoji }: { forService: 'vehicle' | 'shop'; imageUrl?: string; fallbackEmoji: string }) => (
+    <View style={styles.photoRow}>
+      <View style={styles.photoCircle}>
+        {imageUrl
+          ? <Image source={{ uri: imageUrl }} style={styles.photoImage} contentFit="cover" />
+          : <Text style={{ fontSize: 32 }}>{fallbackEmoji}</Text>
+        }
+      </View>
+      <TouchableOpacity
+        style={styles.photoBtn}
+        onPress={() => handlePickPhoto(forService)}
+        disabled={uploadingPhoto !== null}
+        activeOpacity={0.8}
+      >
+        {uploadingPhoto === forService
+          ? <ActivityIndicator color="#2D6A4F" />
+          : <Ionicons name="camera" size={22} color="#2D6A4F" />
+        }
+        <Text style={styles.photoBtnText}>
+          {imageUrl ? t('changePhoto') : t('addPhoto')}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -263,70 +263,65 @@ export default function ProviderDashboardScreen() {
           <Text style={styles.statusHint}>{t('tapToToggle')}</Text>
         </TouchableOpacity>
 
-        {/* Photo */}
-        <Text style={styles.sectionLabel}>{t('photoSection')}</Text>
-        <View style={styles.card}>
-          <View style={styles.photoRow}>
-            <View style={styles.photoCircle}>
-              {imageUrl
-                ? <Image source={{ uri: imageUrl }} style={styles.photoImage} contentFit="cover" />
-                : <Text style={{ fontSize: 32 }}>{vehicleEmoji}</Text>
-              }
-            </View>
-            <TouchableOpacity style={styles.photoBtn} onPress={handlePickPhoto} disabled={uploadingPhoto} activeOpacity={0.8}>
-              {uploadingPhoto
-                ? <ActivityIndicator color="#2D6A4F" />
-                : <Ionicons name="camera" size={22} color="#2D6A4F" />
-              }
-              <Text style={styles.photoBtnText}>
-                {imageUrl ? t('changePhoto') : t('addPhoto')}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Vehicle / Shop Info */}
-        <Text style={styles.sectionLabel}>
-          {isTransport ? t('transportProvider') : t('shopOwner')}
-        </Text>
-        <View style={styles.card}>
-          {isTransport && user.vehicle ? (
-            <>
+        {/* ── Transport Section ── */}
+        {hasTransport && user.vehicle ? (
+          <>
+            <Text style={styles.sectionLabel}>{t('transportProvider')}</Text>
+            <View style={styles.card}>
+              <PhotoRow forService="vehicle" imageUrl={user.vehicle.imageUrl} fallbackEmoji={vehicleEmojis[user.vehicle.type] ?? '🚗'} />
+              <View style={styles.chipDivider} />
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>{t('vehicleLabel')}</Text>
                 <Text style={styles.infoValue}>
-                  {vehicleEmoji} {user.vehicle.type.charAt(0).toUpperCase() + user.vehicle.type.slice(1)}
+                  {vehicleEmojis[user.vehicle.type] ?? '🚗'} {user.vehicle.type.charAt(0).toUpperCase() + user.vehicle.type.slice(1)}
                 </Text>
               </View>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>{t('numberLabel')}</Text>
                 <Text style={styles.infoValue}>{user.vehicle.number}</Text>
               </View>
-              <View style={[styles.infoRow, styles.infoRowLast]}>
+              <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>{t('modelLabel')}</Text>
                 <Text style={styles.infoValue}>{user.vehicle.model}</Text>
               </View>
-            </>
-          ) : user.shop ? (
-            <>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>{t('shopName')}</Text>
-                <Text style={styles.infoValue}>{user.shop.name}</Text>
-              </View>
+              {(user.additionalVehicles ?? []).map((v, i) => {
+                const emoji = vehicleEmojis[v.type] ?? '🚗';
+                return (
+                  <React.Fragment key={i}>
+                    <View style={styles.chipDivider} />
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>{t('vehicleLabel')} {i + 2}</Text>
+                      <Text style={styles.infoValue}>{emoji} {v.type.charAt(0).toUpperCase() + v.type.slice(1)}</Text>
+                    </View>
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>{t('numberLabel')}</Text>
+                      <Text style={styles.infoValue}>{v.number}</Text>
+                    </View>
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>{t('modelLabel')}</Text>
+                      <Text style={[styles.infoValue, { flex: 1 }]}>{v.model}</Text>
+                      <TouchableOpacity onPress={() => handleRemoveAdditionalVehicle(i)} style={{ marginLeft: 8 }}>
+                        <Ionicons name="trash-outline" size={16} color="#DC2626" />
+                      </TouchableOpacity>
+                    </View>
+                  </React.Fragment>
+                );
+              })}
               <View style={[styles.infoRow, styles.infoRowLast]}>
-                <Text style={styles.infoLabel}>{t('category')}</Text>
-                <Text style={styles.infoValue}>{user.shop.category}</Text>
+                <TouchableOpacity
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                  activeOpacity={0.7}
+                  onPress={() => router.push('/provider/choose-vehicle?addMode=1' as any)}
+                >
+                  <Ionicons name="add-circle-outline" size={18} color="#2D6A4F" />
+                  <Text style={{ color: '#2D6A4F', fontSize: 14, fontWeight: '500' }}>Add Another Vehicle</Text>
+                </TouchableOpacity>
               </View>
-            </>
-          ) : null}
-        </View>
+            </View>
 
-        {/* Routes & Villages (transport only) */}
-        {isTransport ? (
-          <>
+            {/* Routes & Villages */}
             <Text style={styles.sectionLabel}>{t('routesSection')}</Text>
             <View style={styles.card}>
-              {/* Routes */}
               <View style={styles.chipSectionHeader}>
                 <Text style={styles.chipSectionTitle}>{t('routesLabel')}</Text>
                 <TouchableOpacity style={styles.addChipBtn} onPress={() => openPicker('route')} activeOpacity={0.8}>
@@ -334,11 +329,11 @@ export default function ProviderDashboardScreen() {
                   <Text style={styles.addChipBtnText}>{t('addRoute')}</Text>
                 </TouchableOpacity>
               </View>
-              {(user.vehicle?.routes ?? []).length === 0
+              {(user.vehicle.routes ?? []).length === 0
                 ? <Text style={styles.emptyChipText}>{t('noRoutes')}</Text>
                 : (
                   <View style={styles.chipRow}>
-                    {(user.vehicle?.routes ?? []).map((route, i) => (
+                    {(user.vehicle.routes ?? []).map((route, i) => (
                       <View key={i} style={styles.chip}>
                         <Text style={styles.chipText}>{route}</Text>
                         <TouchableOpacity onPress={() => handleRemoveRoute(i)}>
@@ -349,10 +344,7 @@ export default function ProviderDashboardScreen() {
                   </View>
                 )
               }
-
               <View style={styles.chipDivider} />
-
-              {/* Villages */}
               <View style={styles.chipSectionHeader}>
                 <Text style={styles.chipSectionTitle}>{t('villagesLabel')}</Text>
                 <TouchableOpacity style={styles.addChipBtn} onPress={() => openPicker('village')} activeOpacity={0.8}>
@@ -360,11 +352,11 @@ export default function ProviderDashboardScreen() {
                   <Text style={styles.addChipBtnText}>{t('addVillage')}</Text>
                 </TouchableOpacity>
               </View>
-              {(user.vehicle?.villages ?? []).length === 0
+              {(user.vehicle.villages ?? []).length === 0
                 ? <Text style={styles.emptyChipText}>{t('noVillages')}</Text>
                 : (
                   <View style={styles.chipRow}>
-                    {(user.vehicle?.villages ?? []).map((v, i) => (
+                    {(user.vehicle.villages ?? []).map((v, i) => (
                       <View key={i} style={[styles.chip, styles.chipVillage]}>
                         <Text style={[styles.chipText, styles.chipTextVillage]}>{v}</Text>
                         <TouchableOpacity onPress={() => handleRemoveVillage(i)}>
@@ -379,10 +371,60 @@ export default function ProviderDashboardScreen() {
           </>
         ) : null}
 
+        {/* ── Shop Section ── */}
+        {hasShop && user.shop ? (
+          <>
+            <Text style={styles.sectionLabel}>{t('shopOwner')}</Text>
+            <View style={styles.card}>
+              <PhotoRow forService="shop" imageUrl={user.shop.imageUrl} fallbackEmoji="🏪" />
+              <View style={styles.chipDivider} />
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>{t('shopName')}</Text>
+                <Text style={styles.infoValue}>{user.shop.name}</Text>
+              </View>
+              <View style={[styles.infoRow, styles.infoRowLast]}>
+                <Text style={styles.infoLabel}>{t('category')}</Text>
+                <Text style={styles.infoValue}>{user.shop.category}</Text>
+              </View>
+            </View>
+          </>
+        ) : null}
+
+        {/* ── Add More Services ── */}
+        {!hasTransport || !hasShop ? (
+          <>
+            <Text style={styles.sectionLabel}>Add More Services</Text>
+            <View style={styles.card}>
+              {!hasTransport ? (
+                <TouchableOpacity
+                  style={styles.infoRow}
+                  activeOpacity={0.7}
+                  onPress={() => router.push('/provider/choose-vehicle' as any)}
+                >
+                  <Ionicons name="car" size={20} color="#2D6A4F" />
+                  <Text style={[styles.infoValue, { flex: 1, marginLeft: 12 }]}>Add Transport</Text>
+                  <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+                </TouchableOpacity>
+              ) : null}
+              {!hasShop ? (
+                <TouchableOpacity
+                  style={[styles.infoRow, !hasTransport ? styles.infoRowLast : undefined]}
+                  activeOpacity={0.7}
+                  onPress={() => router.push('/provider/shop-details' as any)}
+                >
+                  <Ionicons name="storefront" size={20} color="#2D6A4F" />
+                  <Text style={[styles.infoValue, { flex: 1, marginLeft: 12 }]}>Add a Shop</Text>
+                  <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          </>
+        ) : null}
+
         <View style={{ height: 32 }} />
       </ScrollView>
 
-      {/* Mahabhumi Village Picker Modal */}
+      {/* Village Picker Modal */}
       <Modal
         visible={pickerFor !== null}
         animationType="slide"
@@ -400,11 +442,7 @@ export default function ProviderDashboardScreen() {
                   ? (routeStart ? t('selectRouteEnd') : t('selectRouteStart'))
                   : t('addVillage')}
               </Text>
-              {pickerFor === 'route' && routeStart ? (
-                <Text style={styles.modalBreadcrumb}>{routeStart} →</Text>
-              ) : drillBreadcrumb ? (
-                <Text style={styles.modalBreadcrumb}>{drillBreadcrumb}</Text>
-              ) : null}
+              {pickerFor === 'route' && routeStart ? <Text style={styles.modalBreadcrumb}>{routeStart} →</Text> : null}
             </View>
             <TouchableOpacity onPress={() => setPickerFor(null)}>
               <Ionicons name="close" size={22} color="#6B7280" />
@@ -413,10 +451,10 @@ export default function ProviderDashboardScreen() {
 
           <TextInput
             style={styles.modalSearch}
-            placeholder={pickerPlaceholder}
+            placeholder={t('searchVillage')}
             placeholderTextColor="#9CA3AF"
             value={drillQuery}
-            onChangeText={setDrillQuery}
+            onChangeText={handleDrillQuery}
             autoCorrect={false}
           />
 
@@ -426,23 +464,16 @@ export default function ProviderDashboardScreen() {
             </View>
           ) : (
             <FlatList
-              data={filteredDrillItems}
-              keyExtractor={(item) => item.code}
+              data={drillItems}
+              keyExtractor={(item) => item.key}
               keyboardShouldPersistTaps="handled"
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={styles.modalItem}
                   activeOpacity={0.7}
-                  onPress={() => {
-                    if (drillLevel === 'district') handleDistrictSelect(item);
-                    else if (drillLevel === 'taluka') handleTalukaSelect(item);
-                    else handleVillageSelect(item);
-                  }}
+                  onPress={() => handleVillageSelect(item)}
                 >
-                  <Text style={styles.modalItemText}>{item.value}</Text>
-                  {drillLevel !== 'village' && (
-                    <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
-                  )}
+                  <Text style={styles.modalItemText}>{item.name}</Text>
                 </TouchableOpacity>
               )}
               ListEmptyComponent={
@@ -454,6 +485,8 @@ export default function ProviderDashboardScreen() {
           )}
         </SafeAreaView>
       </Modal>
+
+      <BottomNavBar />
     </SafeAreaView>
   );
 }

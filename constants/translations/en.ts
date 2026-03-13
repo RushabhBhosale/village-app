@@ -154,6 +154,7 @@ export const en = {
   routesSection: 'Routes & Villages',
   addRoute: 'Add Route',
   addVillage: 'Add Village',
+  addVehicle: 'Add Vehicle',
   selectRouteStart: 'Select Start Village',
   selectRouteEnd: 'Select End Village',
   add: 'Add',

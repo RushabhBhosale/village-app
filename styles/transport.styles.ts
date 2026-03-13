@@ -159,4 +159,5 @@ export const destinationPickerStyles = StyleSheet.create({
   empty: { alignItems: 'center', paddingTop: 60 },
   emptyText: { color: AuthColors.textSecondary },
   loading: { alignItems: 'center', paddingTop: 60 },
+  searchHint: { fontSize: 12, color: AuthColors.textSecondary, paddingHorizontal: 16, paddingBottom: 6 },
 });

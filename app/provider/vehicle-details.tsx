@@ -64,10 +64,11 @@ const VEHICLE_CONFIG: Record<VehicleType, VehicleConfig> = {
 };
 
 export default function VehicleDetailsScreen() {
-  const { vehicleType } = useLocalSearchParams<{ vehicleType: VehicleType }>();
+  const { vehicleType, addMode } = useLocalSearchParams<{ vehicleType: VehicleType; addMode?: string }>();
   const router = useRouter();
-  const { updateProfile } = useAuth();
+  const { user, updateProfile } = useAuth();
   const { t } = useLanguage();
+  const isAddMode = addMode === '1';
 
   const [number, setNumber] = useState('');
   const [model, setModel] = useState('');
@@ -88,16 +89,22 @@ export default function VehicleDetailsScreen() {
     if (!validate()) return;
     setIsLoading(true);
     try {
-      await updateProfile({
-        isProvider: true,
-        providerType: 'transport',
-        providerStatus: 'active',
-        vehicle: {
-          type: vehicleType,
-          number: number.trim().toUpperCase(),
-          model: model.trim(),
-        },
-      });
+      const newVehicle = {
+        type: vehicleType,
+        number: number.trim().toUpperCase(),
+        model: model.trim(),
+      };
+      if (isAddMode) {
+        const existing = user?.additionalVehicles ?? [];
+        await updateProfile({ additionalVehicles: [...existing, newVehicle] });
+      } else {
+        await updateProfile({
+          isProvider: true,
+          providerType: 'transport',
+          providerStatus: 'active',
+          vehicle: newVehicle,
+        });
+      }
       router.dismissAll();
     } catch (error: any) {
       Alert.alert(t('error'), t('couldNotSave'));
@@ -167,7 +174,7 @@ export default function VehicleDetailsScreen() {
               {isLoading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.buttonText}>{t('saveAndBecomeProvider')}</Text>
+                <Text style={styles.buttonText}>{isAddMode ? t('addVehicle') : t('saveAndBecomeProvider')}</Text>
               )}
             </TouchableOpacity>
           </View>

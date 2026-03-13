@@ -156,6 +156,7 @@ export const mr: Record<TranslationKeys, string> = {
   routesSection: 'मार्ग आणि गावे',
   addRoute: 'मार्ग जोडा',
   addVillage: 'गाव जोडा',
+  addVehicle: 'वाहन जोडा',
   selectRouteStart: 'सुरुवातीचे गाव निवडा',
   selectRouteEnd: 'शेवटचे गाव निवडा',
   add: 'जोडा',
